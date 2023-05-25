@@ -4,13 +4,13 @@
 
 今天要讨论的算法都是基于 Disk 的，即查询的中间结果也需要存储到磁盘中。我们需要使用 Buffer Pool 去实现这些算法，要最大化磁盘连续 I/O。
 
-<img src="D:\Notes\images\image-20230523190232703.png" alt="image-20230523190232703" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/image-20230523190232703.png" alt="image-20230523190232703" style="zoom:67%;" />
 
 
 
 `Query Plan`：算子组织成树形结构，数据从叶子节点流向根节点，根节点的输出就是查询的结果，我们将会在下节课讨论数据移动的粒度。
 
-<img src="D:\Notes\images\image-20230523190447723.png" alt="image-20230523190447723" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/image-20230523190447723.png" alt="image-20230523190447723" style="zoom:67%;" />
 
 ## 1.Sorting
 
@@ -40,7 +40,7 @@ DBMS需要对数据进行排序，因为在关系模型下，表中的tuple没�
 
 如下图，一开始一共有 8 个页，每个页是一个独立的 run，然后第一次遍历，也就是 pass0，先将每一个 run 都排好序；第二次遍历中，每次读取进两个相邻的长度为 2 的 run，然后进行合并，输出长度为 4 的排好序的 run（被放置在 2 个页中）；第三次遍历中，每次读取相邻两个长度为 4 的 run，然后进行合并，输出长度为 8 的排好序的 run（放置在 4 个页中）；第四次遍历中，将两个长度为 8 的run合并，最终生成长度为 16 的run（放置在 8 个页中），算法结束。
 
-<img src="D:\Notes\images\1684840058783-5.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840058783-5.png" alt="img" style="zoom:67%;" />
 
 ### General (K-way) Merge Sort
 
@@ -52,7 +52,7 @@ DBMS需要对数据进行排序，因为在关系模型下，表中的tuple没�
 
 外部合并排序的一个优化是：在后台预取下一个run。并在系统处理当前运行时将其存储在第二个缓冲区。这通过不断利用磁盘来减少每一步的IO请求的等待时间。如在处理 page1 中的 run 时，同时把 page2 中的 run 放进内存。这种优化需要多线程。因为预取应该在当前运行的计算过程中进行。
 
-![img](D:\Notes\images\1684840067139-8.png)
+![img](https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840067139-8.png)
 
 ### **Using B+Tree**
 
@@ -60,15 +60,13 @@ DBMS需要对数据进行排序，因为在关系模型下，表中的tuple没�
 
 如果 B+ 树是 **聚簇B+树**，那么可以直接找到最左的叶子节点，然后遍历叶子节点，这样总比外排序好，因为没有计算消耗，所有的磁盘访问都是连续的，而且时间复杂度更低。
 
-![img](D:\Notes\images\1684840204482-11.png)
+![img](https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840204482-11.png)
 
 
 
 如果 B+ 树是 **非聚簇B+树**，那么遍历树总是更坏的，因为每个 record 可能在不同的页中，所有几乎每一个 record 访问都需要磁盘读取。
 
-
-
-![img](D:\Notes\images\1684840208990-14.png)
+![img](https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840208990-14.png)
 
 ## 2. Aggregations
 
@@ -84,9 +82,7 @@ DBMS首先根据`GROUP BY`对tuples进行排序。如果所有数据都在缓冲
 
 如下图，首先先进行 filter 操作，将 grade 是 B/C 的 tuple 筛选出来；然后进行投影操作，将无用的列去掉；然后进行排序，对排好序的结果进行聚集。
 
-
-
-<img src="D:\Notes\images\1684840214697-17.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840214697-17.png" alt="img" style="zoom:67%;" />
 
 ### **Hashing**
 
@@ -114,7 +110,7 @@ DBMS首先根据`GROUP BY`对tuples进行排序。如果所有数据都在缓冲
 
 
 
-<img src="D:\Notes\images\1684840305863-20.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840305863-20.png" alt="img" style="zoom:67%;" />
 
 
 
@@ -122,7 +118,7 @@ DBMS首先根据`GROUP BY`对tuples进行排序。如果所有数据都在缓冲
 
 
 
-<img src="D:\Notes\images\1684840336580-23.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840336580-23.png" alt="img" style="zoom:67%;" />
 
 
 
@@ -130,7 +126,7 @@ DBMS首先根据`GROUP BY`对tuples进行排序。如果所有数据都在缓冲
 
 
 
-<img src="D:\Notes\images\1684840352694-26.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840352694-26.png" alt="img" style="zoom:67%;" />
 
 
 

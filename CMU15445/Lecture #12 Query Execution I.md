@@ -6,7 +6,7 @@
 
 通常，树上的操作符 operators 是二元的 (1~2个子运算符)。
 
-<img src="D:\Notes\images\1684841385827-64.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841385827-64.png" alt="img" style="zoom:67%;" />
 
 ## **2 Processing Models**
 
@@ -24,7 +24,7 @@
 
 query plan 中的每步 operator 都实现一个 `next` 函数，**每次调用时，operator 返回一个 tuple 或者 null**，后者表示数据已经遍历完毕。operator 本身实现一个循环，每次调用其 child operators 的 next 函数，从它们那边获取下一条数据供自己操作，这样整个 query plan 就被从上至下地串联起来：
 
-<img src="D:\Notes\images\1684841397671-67.png" alt="img" style="zoom: 67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841397671-67.png" alt="img" style="zoom: 67%;" />
 
 此模型几乎被用在每个 (基于行) DBMS 中，包括 sqlite、MySQL、PostgreSQL 等等。需要注意的是：
 
@@ -40,7 +40,7 @@ query plan 中的每步 operator 都实现一个 `next` 函数，**每次调用�
 - 操作符一次处理其子代的所有元组。
 - 此函数的返回结果是运算符将发出的所有元组。当操作符完成执行时，DBMS**再也不需要返回到**它来检索更多数据。
 
-<img src="D:\Notes\images\1684841430332-70.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841430332-70.png" alt="img" style="zoom:67%;" />
 
 materialization model：
 
@@ -55,7 +55,7 @@ Vectorization Model 是 Iterator 与 Materialization Model 折中的一种模型
 - operator 内部的循环每次也是一批一批 tuples 地处理
 - batch 的大小可以根据需要改变 ( hardware、query properties)
 
-<img src="D:\Notes\images\1684841438552-73.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841438552-73.png" alt="img" style="zoom:67%;" />
 
 vectorization model 是 **OLAP** 查询的理想模型：
 
@@ -70,7 +70,7 @@ vectorization model 是 **OLAP** 查询的理想模型：
 
 2、Bottom-to-Top：从下往上执行，向父结点 push 数据。
 
-<img src="D:\Notes\images\1684841447857-76.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841447857-76.png" alt="img" style="zoom:67%;" />
 
 ## **3 Access Methods**
 
@@ -82,7 +82,7 @@ access method 指的是 DBMS 从数据表中获取数据的方式，它并没有
 
 > 相同的查询计划可以以多种方式执行，多数 DBMS 都希望尽可能多地使用 Index Scan。
 
-### **3.1 Sequential Scan**
+### **Sequential Scan**
 
 sequential scan 就是按顺序从 table 所在的 pages 中取出 tuple，这种方式是 DBMS 能做的最坏的打算。
 
@@ -108,7 +108,7 @@ Sequential Scan 是最差的方案，因此也针对地有许多优化方案：
 
 预先为每个 page 计算好 attribute values 的一些统计值 (最大值，最小值，平均值)，并存入zone map中。DBMS 在访问 page 之前先检查 zone map，确认一下是否要继续访问，如下图所示：
 
-<img src="D:\Notes\images\1684841457189-79.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841457189-79.png" alt="img" style="zoom:67%;" />
 
 当 DBMS 发现 page 的 Zone Map 中记录 val 的最大值为 400 时，就没有必要访问这个 page。
 
@@ -120,7 +120,7 @@ Sequential Scan 是最差的方案，因此也针对地有许多优化方案：
 
 使用 clustering index 时，tuples 在 page 中按照相应的顺序排列，如果查询访问的是被索引的 attributes，DBMS 就可以直接跳跃访问目标 tuples。
 
-### **3.2 Index Scan**
+### **Index Scan**
 
 DBMS 选择一个 index 来找到查询需要的 tuples。使用哪个 index 取决于以下几个因素：
 
@@ -157,7 +157,7 @@ Scenario #2：CS 部门有 99 人，但 30 岁以下的只有 2 人。
 
 仍然以上一个 SQL 为例，如果我们 在age 和 dept 上建立索引，使用 multi-index scan 的过程如下所示：
 
-![img](D:\Notes\images\1684841475843-82.png)
+![img](https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841475843-82.png)
 
 其中取集合交集可以使用 bitmaps, hash tables 或者 bloom filters。
 
@@ -167,7 +167,7 @@ Postgres 称 multi-index scan 为 Bitmap Scan。
 
 当使用的不是 clustering index 时，按 index 顺序检索的过程是非常低效的，因为 DBMS 很有可能需要不断地在不同的 pages 之间来回切换，这会导致许多没有必要的I/O。为了解决这个问题，DBMS 通常会先找到所有需要的 tuples，根据它们的 page id 来排序，排序完毕后再读取 tuples 数据，这可让整个过程中访问每个需要的 page 只进行一次I/O。如下图所示：
 
-<img src="D:\Notes\images\1684841478664-85.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841478664-85.png" alt="img" style="zoom:67%;" />
 
 ## **4 Modification Queries**
 
@@ -190,7 +190,7 @@ DBMS 使用 expression tree 来表示一个 WHERE 语句。
 - 常数 Constant Values
 - 元组属性引用 Tuple Attribute References
 
-![img](D:\Notes\images\1684841487099-88.png)
+![img](https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841487099-88.png)
 
 然后根据 expression tree 完成数据过滤的判断，但这个过程比较低效，很多 DBMS 采用 JIT Compilation 的方式，直接将比较的过程编译成机器码来执行，提高 expression evaluation 的效率。
 

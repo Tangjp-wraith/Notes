@@ -12,27 +12,25 @@
 
 逻辑上 Join 的操作的结果是：对任意一个 tuple r∈R和任意一个在 Join Attributes 上对应的 tuple s∈S，将 r 和 s 串联成一个新的 tuple。
 
-<img src="D:\Notes\images\1684840823584-1.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840823584-1.png" alt="img" style="zoom:67%;" />
 
-- 现实中，Join 操作输出元组内容还取决于 `processing model`, `storage model` 和 `query` 本身。下面列举了几种输出元组的内容：
+现实中，Join 操作输出元组内容还取决于 `processing model`, `storage model` 和 `query` 本身。下面列举了几种输出元组的内容：
 
-- - **Data**： Join 时，将内表和外表的所有非 Join Attributes 的属性都复制到输出元组中。又称 **提前物化**。优点是：Join 之后的操作都无需从原表中重新获取数据；缺点是：需要更多地内存。
+- **Data**： Join 时，将内表和外表的所有非 Join Attributes 的属性都复制到输出元组中。又称 **提前物化**。优点是：Join 之后的操作都无需从原表中重新获取数据；缺点是：需要更多地内存。<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840838649-4.png" alt="img" style="zoom: 67%;" />
 
-- <img src="D:\Notes\images\1684840838649-4.png" alt="img" style="zoom: 67%;" />
+- **Record Ids**：Join 时，只将内外表的 Join Attributes 及 record id 复制到输出元组，后续操作自行根据 record id 去原表中获取相关数据。又称 **推迟物化(Late Materialization)**。适用于列存储数据库，因为这样 DBMS 不需要复制对于查询没用的属性。
 
-- - **Record Ids**：Join 时，只将内外表的 Join Attributes 及 record id 复制到输出元组，后续操作自行根据 record id 去原表中获取相关数据。又称 **推迟物化(Late Materialization)**。适用于列存储数据库，因为这样 DBMS 不需要复制对于查询没用的属性。
-
-- <img src="D:\Notes\images\1684840855282-7.png" alt="img" style="zoom:67%;" />
+  <img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840855282-7.png" alt="img" style="zoom:67%;" />
 
 ### **I/O Cost Analysis**
 
 由于数据库中的数据量通常较大，无法一次性载入内存，因此 Join Algorithm 的设计目的，在于减少磁盘 I/O，因此我们衡量 Join Algorithm 好坏的标准，就是 I/O 的数量。此外我们不需要考虑 Join 结果的大小，因为不论使用怎样的 Join Algorithm，结果集的大小都一样。
 
-- 之后的讨论都建立在这样的情景：
+之后的讨论都建立在这样的情景：
 
-- - 对R和S两个 tables 做 Join
-  - R中有 M个 pages，m个tuples
-  - S中有 N个 pages，n个tuples
+- 对R和S两个 tables 做 Join
+- R中有 M个 pages，m个tuples
+- S中有 N个 pages，n个tuples
 
 下面介绍的连接算法都有各自的适用场景，没有一个算法可以在所有场景下表现良好，需要具体问题具体分析。
 
@@ -52,7 +50,7 @@ DBMS总是希望小表当做外表，这里的“小”是指占用的页数或�
 
 对于外表R的每一个元组，都遍历一遍S表，没有任何缓存机制，没有利用任何局部性。
 
-<img src="D:\Notes\images\1684840940545-10.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840940545-10.png" alt="img" style="zoom:67%;" />
 
 磁盘 I/O Cost：$$M+(m×N)$$
 
@@ -60,7 +58,7 @@ M是读入外表 (R) 的 I/O 次数，然后对于R表的 m个元组，每个都
 
 举例：用时一个多小时
 
-<img src="D:\Notes\images\1684840948341-13.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840948341-13.png" alt="img" style="zoom:67%;" />
 
 ### **Block Nested Loop Join**
 
@@ -70,13 +68,13 @@ M是读入外表 (R) 的 I/O 次数，然后对于R表的 m个元组，每个都
 
 这里的外表要选择页数少的，而不是元组个数少的。
 
-<img src="D:\Notes\images\1684840955294-16.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840955294-16.png" alt="img" style="zoom:67%;" />
 
 假设对于外表 (R) 的划分是一个页为一个块，磁盘 I/O Cost：$$M+(M×N)$$。M是读入外表的 I/O 次数，然后对于每一个块 (这里一个页就是一个块，共 M个块) 遍历一遍内表。
 
 举例：用时50s：
 
-![img](D:\Notes\images\1684840963034-19.png)
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840963034-19.png" alt="img" style="zoom:67%;" />
 
 假如可以使用 B 个 buffer，我们使用一个 buffer 存储输出结果，一个 buffer 存储内表，剩下 B - 2 个 buffer 存储外表。这样就能将外表的一个 block 大小设置为 B - 2 个页。则磁盘 I/O Cost：$$M+(\lceil\frac{M}{B-2}\rceil\times N)$$。M是读入外表的 I/O 次数，然后对于每一个块 (这里B - 2个页是一个块，共 $$\lceil\frac{M}{B-2}\rceil$$个块) 遍历一遍内表。
 
@@ -84,13 +82,13 @@ M是读入外表 (R) 的 I/O 次数，然后对于R表的 m个元组，每个都
 
 举例：用时 0.15 s：
 
-![img](D:\Notes\images\1684840969638-22.png)
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840969638-22.png" alt="img" style="zoom:67%;" />
 
 ### **Index Nested Loop Join**
 
 之前的两种 Nested Loop Join 速度慢的原因在于，需要线性扫描一遍内表，如果内表在 Join Attributes 上有索引的话，就不用每次都线性扫描了。DBMS 可以在 Join Attributes 上临时构建一个索引，或者利用已有的索引。
 
-<img src="D:\Notes\images\1684840980424-25.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684840980424-25.png" alt="img" style="zoom:67%;" />
 
 假设每次索引查询都需要C的花费，那么磁盘 I/O Cost：$$M+(m\times C)$$。
 
@@ -106,11 +104,11 @@ M是读入外表 (R) 的 I/O 次数，然后对于R表的 m个元组，每个都
 
 **Phase #2 - Merge**：用双指针遍历两个表，输出匹配的元组（如果 Join Keys 并不唯一，则可能需要指针的回退）
 
-![img](D:\Notes\images\1684841004576-28.png)
+![img](https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841004576-28.png)
 
 举例：
 
-<img src="D:\Notes\images\1684841008054-31.png" alt="img"  />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841008054-31.png" alt="img"  />
 
 Lecture# 0中我们了解到外部归并算法的需遍历数据 $$1+\lceil\log_{B-1}{\frac{N}{B}}\rceil$$次（B表示缓冲页数量，N表示数据页总数）
 
@@ -130,7 +128,7 @@ Total Cost： Sort + Merge
 
 举例： 用时 0.75 s：
 
-<img src="D:\Notes\images\1684841063109-34.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841063109-34.png" alt="img" style="zoom:67%;" />
 
 > Sort-Merge Join 适用于：
 >
@@ -143,13 +141,13 @@ Total Cost： Sort + Merge
 
 ### **Basic Hash Join**
 
-- **Phase #1: Build**：扫描外表，使用哈希函数 h1 对 Join Attributes 建立哈希表 T
+**Phase #1: Build**：扫描外表，使用哈希函数 h1 对 Join Attributes 建立哈希表 T
 
-- - 若提前已知外表的大小，则可用静态哈希表 (现行探查哈希表现最好)；若不知道，应用动态哈希表，且支持溢出页。
+- 若提前已知外表的大小，则可用静态哈希表 (现行探查哈希表现最好)；若不知道，应用动态哈希表，且支持溢出页。
 
 **Phase #2: Probe**：扫描内表，对每个 tuple 使用哈希函数 h1，计算在T中对应的 bucket，在 bucket 中找到匹配的 tuples
 
-<img src="D:\Notes\images\1684841069130-37.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841069130-37.png" alt="img" style="zoom:67%;" />
 
 这里明确哈希表T的定义：
 
@@ -170,11 +168,11 @@ Total Cost： Sort + Merge
 
 Bloom Filter 插入阶段，使用 k 个哈希函数，将过滤器对应位设为1；查询阶段，查看过滤器 k 个哈希函数值对应的位是否都是1。
 
-<img src="D:\Notes\images\1684841087363-40.png" alt="img" style="zoom:67%;" /><img src="D:\Notes\images\1684841093986-43.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841087363-40.png" alt="img" style="zoom:67%;" /><img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841093986-43.png" alt="img" style="zoom:67%;" />
 
 出现假阳性'ODB'：
 
-<img src="D:\Notes\images\1684841105299-46.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841105299-46.png" alt="img" style="zoom:67%;" />
 
 ### **Partitioned Hash Join(GRACE hash join)**
 
@@ -186,29 +184,29 @@ Grace hash join是基础哈希连接的一个扩展，将内表也制作成可�
 
 **Phase #2: Probe**：比较两个表对应 bucket 的 tuples，输出匹配结果
 
-<img src="D:\Notes\images\1684841110126-49.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841110126-49.png" alt="img" style="zoom:67%;" />
 
 假设我们有足够的 buffers 能够存下中间结果，则磁盘 I/O Cost：$$3(M+N)$$。其中 partition 阶段，需要读、写两个表各一次，Cost: $$2(M+N)$$，probing 阶段要读两个表各一次，Cost: $$M+N$$。
 
 举例：用时0.45s：
 
-![img](D:\Notes\images\1684841114441-52.png)
+![img](https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841114441-52.png)
 
 如果一个 bucket 不能放到内存中，那么就使用 `recursive partition`，将这个大 bucket 使用另一个哈希函数再进行哈希，使其能放入内存中。
 
 通过哈希函数 h1 partition 后的 bucket1 太大没办法放入内存，则对 bucket1 使用哈虚函数 h2 再进行一次 partition，使它能放入内存。另一个表匹配时也要进行相同的哈希。
 
-<img src="D:\Notes\images\1684841117738-55.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841117738-55.png" alt="img" style="zoom:67%;" />
 
 **Optimization：Hybrid Hash Join**
 
 如果 key 是有偏斜的，那么可以使用 Hybrid Hash Join：让 DBMS 将 hot partition 放在内存立即进行匹配操作，而不是将它们溢出到磁盘中。（难以实现，现实中少见）
 
-<img src="D:\Notes\images\1684841122500-58.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841122500-58.png" alt="img" style="zoom:67%;" />
 
 ## **Conclusion**
 
-<img src="D:\Notes\images\1684841127613-61.png" alt="img" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/Tangjp-wraith/Images/master/1684841127613-61.png" alt="img" style="zoom:67%;" />
 
 Hash Join 在绝大多数场景下是最优选择。但当查询包含 `ORDER BY` 或者数据极其不均匀的情况下，Sort-Merge Join 会是更好的选择。
 
